@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>登录 / 注册</title>
+  <style>
+    body {
+      font-family: "微软雅黑", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(to right, #fce4ec, #e0f7fa);
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+      width: 360px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .checkbox {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .checkbox input {
+      margin-right: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #03a9f4;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    button:hover {
+      background: #0288d1;
+    }
+    .link {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .link a {
+      color: #0288d1;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 id="formTitle">登录</h2>
+    <input id="nickname" placeholder="昵称（最多10字或20英文）" maxlength="20">
+    <input id="password" type="password" placeholder="密码（最多20字符）" maxlength="20">
+    <div class="checkbox">
+      <input type="checkbox" id="showPwd" onclick="togglePassword()"> 显示密码
+    </div>
+    <div class="checkbox">
+      <input type="checkbox" id="remember"> 记住账号
+    </div>
+    <button onclick="submit()" id="submitBtn">登录</button>
+    <button onclick="toggleMode()" id="toggleBtn">切换为注册</button>
+    <div class="link">
+      <a onclick="location.href='/reset.html'">忘记密码？</a>
+    </div>
+  </div>
+
+  <script>
+    let isRegister = false;
+
+    window.onload = () => {
+      const savedName = localStorage.getItem("savedNickname");
+      if (savedName) document.getElementById("nickname").value = savedName;
+    }
+
+    function toggleMode() {
+      isRegister = !isRegister;
+      document.getElementById('formTitle').innerText = isRegister ? '注册' : '登录';
+      document.getElementById('submitBtn').innerText = isRegister ? '注册' : '登录';
+      document.getElementById('toggleBtn').innerText = isRegister ? '切换为登录' : '切换为注册';
+    }
+
+    function togglePassword() {
+      const pwd = document.getElementById("password");
+      pwd.type = pwd.type === "password" ? "text" : "password";
+    }
+
+    function submit() {
+      const nickname = document.getElementById('nickname').value.trim();
+      const password = document.getElementById('password').value.trim();
+        if (!nickname || !password || nickname.includes(' ') || password.includes(' ')) {
+        alert("昵称和密码不能为空，且不能包含空格");
+        return;
+        }
+      const nicknameLength = Array.from(nickname).reduce((sum, char) => sum + (char.charCodeAt(0) > 255 ? 2 : 1), 0);
+      if (nicknameLength > 20) {
+        alert("昵称最多10个中文或20个英文数字字符");
+        return;
+      }
+      if (!/^[\u4e00-\u9fa5\w]{1,20}$/.test(nickname)) {
+        alert("昵称只能包含中文、字母、数字、下划线");
+        return;
+      }
+      if (password.length > 20) {
+        alert("密码长度不能超过20字符");
+        return;
+      }
+
+      fetch(isRegister ? '/register' : '/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, password })
+      })
+      .then(res => isRegister ? res.text() : res.json())
+      .then(msg => {
+        if (isRegister) {
+          alert(msg);
+          if (msg.includes("成功")) toggleMode();
+        } else {
+          if (msg.token) {
+            if (document.getElementById("remember").checked) {
+              localStorage.setItem("savedNickname", nickname);
+            } else {
+              localStorage.removeItem("savedNickname");
+            }
+            localStorage.setItem("token", msg.token);
+            alert("登录成功！");
+            window.location.href = '/forum.html';
+          } else {
+            alert("登录失败");
+          }
+        }
+      });
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') submit();
+    });
+  </script>
+</body>
+</html>
